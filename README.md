@@ -1,12 +1,5 @@
 # Развертывание модели машинного обучения в Production
-
-
-
-# Задача №2. Git push -f или работа в production
-Требуется создать fastapi приложение для вашей модели классификации и развернуть данное приложение локально при помощи Docker. Протестировать get запросы (направляя X вектор переменных) и получить response в виде целевой переменной (для теста можно использовать Postman).
-
-Датасет доступен по ссылке: https://www.kaggle.com/ronitf/heart-disease-uci
-
+Необходимо создать FastApi приложение для модели классификации и развернуть данное приложение локально при помощи Docker. Протестировать Get запросы (направляя X вектор переменных) и получить Response в виде целевой переменной. Исходные данные доступны по ссылке https://www.kaggle.com/ronitf/heart-disease-uci
 
 ## Docker-файл
 ```python
@@ -18,8 +11,8 @@ EXPOSE 8000
 CMD ["python", "main.py"]
 ```
 
-##
-----
+## Production-файл модели
+```python
 # Импорт основных библиотек
 import numpy as np
 import pandas as pd
@@ -110,8 +103,10 @@ async def predict(item: Patient):
 # Запуск web-сервера
 if __name__=='__main__':
     uvicorn.run('main:app', host='0.0.0.0')
+```
 
-----
+## Исследование модели машинного обучения
+### Подключение библиотек
 ```python
 # Импорт основных библиотек
 import numpy as np
@@ -134,14 +129,14 @@ from sklearn.naive_bayes import GaussianNB
 %matplotlib inline
 ```
 
-## Загрузка исходных данных
+### Загрузка исходных данных
 ```python
 heart_database = pd.read_csv('heart.csv', low_memory=True)
 heart_database.head()
 ```
 ![png](Images/table01.jpg)
 
-## Разведочный анализ данных
+### Разведочный анализ данных
 ```python
 # Вывод информации о структуре исходных данных
 heart_database.info()
@@ -182,7 +177,7 @@ plt.show()
 ```
 ![png](Images/chart01.jpg)
 
-## Предварительная обработка данных
+### Предварительная обработка данных
 ```python
 # Разбиение данных на признаки и целевые переменные
 X_train, X_test, Y_train, Y_test = train_test_split(
@@ -190,7 +185,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(
     stratify=heart_database.iloc[:, -1], train_size=0.8, random_state=42)
 ```
 
-## Построение моделей
+### Построение моделей
 ```python
 # Определение списка категориальных признаков
 catigorical_features = [column for i, column in enumerate(heart_database.columns[:-1]) 
