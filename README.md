@@ -1,8 +1,5 @@
+# Развертывание модели машинного обучения в Production
 
-
-# DOCKER
-```python
-```
 
 
 # Задача №2. Git push -f или работа в production
@@ -10,6 +7,111 @@
 
 Датасет доступен по ссылке: https://www.kaggle.com/ronitf/heart-disease-uci
 
+
+## Docker-файл
+```python
+FROM python
+COPY . /app
+WORKDIR /app
+RUN pip install numpy pandas scikit-learn fastapi uvicorn
+EXPOSE 8000
+CMD ["python", "main.py"]
+```
+
+##
+----
+# Импорт основных библиотек
+import numpy as np
+import pandas as pd
+
+# Импорт библиотек машинного обучения
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.feature_selection import VarianceThreshold, SelectKBest, chi2
+from sklearn.metrics import roc_auc_score
+from sklearn.naive_bayes import GaussianNB
+
+# Импорт библиотеки построения WebApi-серверов
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+# Импорт библиотеки web-сервера
+import uvicorn
+
+# Определение класса Пациент
+class Patient(BaseModel):
+    age: int = 63
+    sex: int = 1
+    cp: int = 3
+    trestbps: int = 145
+    chol: int = 233
+    fbs: int = 1
+    restecg: int = 0
+    thalach: int = 150
+    exang: int = 0
+    oldpeak: float = 2.3
+    slope: int = 0
+    ca: int = 0
+    thal: int = 1
+
+# Функция построения модели классификации
+def create_model():
+    # Загрузка исходных данных
+    data = pd.read_csv('heart.csv', low_memory=True)
+
+    # Разбиение данных на признаки и целевые переменные
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        data.iloc[:, :-1], data.iloc[:, -1], stratify=data.iloc[:, -1], train_size=0.8, random_state=42)
+
+    # Определение списка категориальных признаков
+    catigorical_features = [column for i, column in enumerate(data.columns[:-1])
+                                   if len(data.iloc[:, i].unique()) < 20]
+    # Построение модели классификации
+    preprocessor = ColumnTransformer(
+        [('encoder', OneHotEncoder(sparse=False), catigorical_features)],
+        remainder='passthrough')
+
+    pipeline = Pipeline([
+        ('preprocess', preprocessor),
+        ('var_select', VarianceThreshold(0.001)),
+        ('chi2_select', SelectKBest(chi2, k=20)),
+        ('classifier', GaussianNB())])
+
+    model = pipeline.fit(X_train, Y_train)
+
+    # Определение оценки качества модели
+    score = roc_auc_score(Y_test, model.predict(X_test))
+
+    return model, score, X_train.columns
+
+model, score, column_names = create_model()
+
+# Создание объекта приложения FastApi
+app = FastAPI()
+
+# Информация о модели классификации
+@app.get('/model')
+async def get_model():
+    return {'Модель': 'Байесовский классификатор',
+            'ROC-AUC': np.round(score, 2)}
+
+# Предсказание результатов моделью классификации
+@app.post('/predict')
+async def predict(item: Patient):
+    data = pd.DataFrame(np.array([item.age, item.sex, item.cp, item.trestbps, item.chol, item.fbs, item.restecg,
+                                  item.thalach, item.exang, item.oldpeak, item.slope, item.ca, item.thal])[None, ...],
+                        columns=column_names)
+    prediction = model.predict(data).tolist()[0]
+
+    return {'Наличие болезни сердца: ': prediction}
+
+# Запуск web-сервера
+if __name__=='__main__':
+    uvicorn.run('main:app', host='0.0.0.0')
+
+----
 ```python
 # Импорт основных библиотек
 import numpy as np
